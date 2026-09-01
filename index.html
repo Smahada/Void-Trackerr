@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Void Tracker</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--text:#182230;--muted:#6b7280;--primary:#111827;--line:#e5e7eb;--danger:#dc2626;--success:#16a34a}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--text)}
+.app{display:flex;min-height:100vh}.sidebar{width:245px;background:#111827;color:white;padding:24px 16px;position:fixed;inset:0 auto 0 0}
+.logo{font-size:23px;font-weight:800;padding:8px 12px 30px}.logo span{color:#60a5fa}
+.nav button{display:block;width:100%;border:0;background:transparent;color:#cbd5e1;text-align:left;padding:12px 14px;border-radius:10px;margin:5px 0;font-size:14px;cursor:pointer}.nav button.active,.nav button:hover{background:#1f2937;color:white}
+.main{margin-left:245px;width:calc(100% - 245px);padding:28px 32px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}.top h1{margin:0;font-size:26px}.top p{margin:5px 0 0;color:var(--muted);font-size:14px}
+.btn{border:0;border-radius:9px;padding:11px 16px;background:var(--primary);color:#fff;font-weight:700;cursor:pointer}.btn.secondary{background:#fff;color:#111827;border:1px solid var(--line)}.btn.danger{background:var(--danger)}
+.page{display:none}.page.active{display:block}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}.label{font-size:13px;color:var(--muted)}.value{font-size:27px;font-weight:800;margin-top:7px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}.panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:18px}.panel h3{margin:0 0 16px}
+.barrow{margin:13px 0}.barhead{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px}.bar{height:9px;background:#edf0f4;border-radius:20px;overflow:hidden}.fill{height:100%;background:#111827;border-radius:20px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:12px 10px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--muted);font-weight:700}
+.badge{display:inline-block;padding:5px 9px;border-radius:20px;background:#eef2ff;font-size:11px;font-weight:700}.badge.ok{background:#dcfce7;color:#166534}.badge.pending{background:#fef3c7;color:#92400e}.badge.reject{background:#fee2e2;color:#991b1b}
+.formgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:7px}.field input,.field select{width:100%;padding:11px 12px;border:1px solid #d8dde5;border-radius:9px;background:#fff;font-size:14px}.full{grid-column:1/-1}.actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.filters{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}.filters input,.filters select{padding:10px;border:1px solid var(--line);border-radius:8px}
+.empty{text-align:center;color:var(--muted);padding:30px}.rank{display:flex;align-items:center;gap:10px}.medal{font-size:18px;width:28px}.rankname{flex:1}.ranknum{font-weight:800}
+@media(max-width:900px){.sidebar{width:70px;padding:16px 8px}.logo{font-size:0;padding:8px 5px 25px}.logo span{font-size:22px}.nav button{font-size:0;text-align:center}.nav button:before{font-size:18px}.main{margin-left:70px;width:calc(100% - 70px);padding:20px}.cards{grid-template-columns:repeat(2,1fr)}.grid2,.formgrid{grid-template-columns:1fr}.filters{grid-template-columns:1fr 1fr}.full{grid-column:auto}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="logo">Void<span>Tracker</span></div>
+  <nav class="nav">
+    <button class="active" onclick="showPage('dashboard',this)">📊 Dashboard</button>
+    <button onclick="showPage('input',this)">➕ Input Void</button>
+    <button onclick="showPage('database',this)">🗃️ Database</button>
+    <button onclick="showPage('ranking',this)">🏆 Ranking</button>
+  </nav>
+</aside>
+<main class="main">
+  <div class="top"><div><h1 id="title">Dashboard Void</h1><p>Monitoring dan pencatatan void seluruh branch.</p></div><button class="btn" onclick="showPage('input')">+ Tambah Void</button></div>
+
+  <section id="dashboard" class="page active">
+    <div class="cards">
+      <div class="card"><div class="label">Total Void</div><div class="value" id="totalVoid">0</div></div>
+      <div class="card"><div class="label">Total Nominal</div><div class="value" id="totalNominal">Rp0</div></div>
+      <div class="card"><div class="label">Branch Tercatat</div><div class="value" id="branchCount">0</div></div>
+      <div class="card"><div class="label">Status Pending</div><div class="value" id="pendingCount">0</div></div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><h3>Ranking Void per Branch</h3><div id="branchBars"></div></div>
+      <div class="panel"><h3>Ranking berdasarkan Tipe Void</h3><div id="reasonBars"></div></div>
+    </div>
+    <div class="panel"><h3>Void Terbaru</h3><div id="recent"></div></div>
+  </section>
+
+  <section id="input" class="page">
+    <div class="panel">
+      <h3>Input Data Void</h3>
+      <form id="voidForm">
+        <div class="formgrid">
+          <div class="field"><label>Tanggal *</label><input type="date" id="date" required></div>
+          <div class="field"><label>Nama Toko / Branch *</label><input id="branch" placeholder="Contoh: 012 Sukorame" required></div>
+          <div class="field"><label>Inputer *</label><input id="inputer" placeholder="Nama inputer" required></div>
+          <div class="field"><label>Kode Transaksi *</label><input id="trx" placeholder="Contoh: TRX-20260901-001" required></div>
+          <div class="field"><label>Nominal *</label><input type="number" id="amount" min="0" placeholder="Contoh: 25000" required></div>
+          <div class="field"><label>Alasan Void *</label><select id="reason" required></select></div>
+          <div class="field"><label>Status Void *</label><select id="status" required><option value="PENDING">PENDING</option><option value="APPROVED">APPROVED</option><option value="REJECTED">REJECTED</option></select></div>
+        </div>
+        <div class="actions"><button type="button" class="btn secondary" onclick="showPage('dashboard')">Batal</button><button class="btn">Simpan Void</button></div>
+      </form>
+    </div>
+  </section>
+
+  <section id="database" class="page">
+    <div class="panel">
+      <h3>Database Void</h3>
+      <div class="filters">
+        <input type="date" id="filterDate" onchange="renderDatabase()">
+        <input id="filterBranch" placeholder="Filter branch..." oninput="renderDatabase()">
+        <select id="filterReason" onchange="renderDatabase()"></select>
+        <input id="search" placeholder="Cari kode transaksi / inputer..." oninput="renderDatabase()">
+      </div>
+      <div style="overflow:auto"><table><thead><tr><th>Tanggal</th><th>Branch</th><th>Inputer</th><th>Kode Transaksi</th><th>Nominal</th><th>Alasan</th><th>Status</th><th></th></tr></thead><tbody id="dbBody"></tbody></table></div>
+    </div>
+  </section>
+
+  <section id="ranking" class="page">
+    <div class="grid2">
+      <div class="panel"><h3>🏆 Ranking Branch</h3><div id="branchRanking"></div></div>
+      <div class="panel"><h3>🏆 Ranking Tipe Void</h3><div id="reasonRanking"></div></div>
+    </div>
+  </section>
+</main>
+</div>
+<script>
+const reasons=["CANCELED BY SYSTEM","SALAH METODE PEMBAYARAN","SALAH INPUT SUB TOTAL","SALAH INPUT MENU","DOUBLE INPUT"];
+let data=JSON.parse(localStorage.getItem("voidTrackerData")||"[]");
+const $=id=>document.getElementById(id);
+function rupiah(n){return new Intl.NumberFormat("id-ID",{style:"currency",currency:"IDR",maximumFractionDigits:0}).format(n||0)}
+function fillSelect(id,arr){const s=$(id);s.innerHTML='<option value="">Pilih...</option>'+arr.map(x=>`<option>${x}</option>`).join("")}
+function init(){
+ fillSelect("reason",reasons);
+ fillSelect("filterReason",reasons);
+ $("date").value=new Date().toISOString().slice(0,10);
+ renderAll();
+}
+function showPage(id,btn){
+ document.querySelectorAll(".page").forEach(x=>x.classList.remove("active")); $(id).classList.add("active");
+ document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active")); if(btn)btn.classList.add("active");
+ const titles={dashboard:"Dashboard Void",input:"Input Void",database:"Database Void",ranking:"Ranking Void"};$("title").textContent=titles[id];
+ if(id==="dashboard"||id==="ranking")renderAll(); if(id==="database")renderDatabase();
+}
+$("voidForm").addEventListener("submit",e=>{
+ e.preventDefault();
+ const row={id:Date.now(),date:$("date").value,branch:$("branch").value.trim(),inputer:$("inputer").value.trim(),trx:$("trx").value.trim(),amount:Number($("amount").value),reason:$("reason").value,status:$("status").value};
+ data.unshift(row);localStorage.setItem("voidTrackerData",JSON.stringify(data));e.target.reset();$("date").value=new Date().toISOString().slice(0,10);
+ alert("Data void berhasil disimpan.");showPage("dashboard");
+});
+function counts(key){return data.reduce((o,x)=>(o[x[key]]=(o[x[key]]||0)+1,o),{})}
+function sortedCounts(key){return Object.entries(counts(key)).sort((a,b)=>b[1]-a[1])}
+function bars(target,arr){
+ const max=arr[0]?.[1]||1; $(target).innerHTML=arr.length?arr.slice(0,10).map(([n,v])=>`<div class="barrow"><div class="barhead"><span>${n}</span><b>${v}</b></div><div class="bar"><div class="fill" style="width:${Math.max(4,v/max*100)}%"></div></div></div>`).join(""):'<div class="empty">Belum ada data.</div>';
+}
+function ranking(target,arr){$(target).innerHTML=arr.length?arr.map(([n,v],i)=>`<div class="rank" style="padding:11px 0;border-bottom:1px solid var(--line)"><span class="medal">${i===0?"🥇":i===1?"🥈":i===2?"🥉":"#"+(i+1)}</span><span class="rankname">${n}</span><span class="ranknum">${v} void</span></div>`).join(""):'<div class="empty">Belum ada data.</div>'}
+function renderAll(){
+ $("totalVoid").textContent=data.length;$("totalNominal").textContent=rupiah(data.reduce((s,x)=>s+x.amount,0));
+ $("branchCount").textContent=new Set(data.map(x=>x.branch)).size;$("pendingCount").textContent=data.filter(x=>x.status==="PENDING").length;
+ bars("branchBars",sortedCounts("branch"));bars("reasonBars",sortedCounts("reason"));
+ ranking("branchRanking",sortedCounts("branch"));ranking("reasonRanking",sortedCounts("reason"));
+ const recent=data.slice(0,8);$("recent").innerHTML=recent.length?`<table><thead><tr><th>Tanggal</th><th>Branch</th><th>Kode</th><th>Nominal</th><th>Alasan</th><th>Status</th></tr></thead><tbody>${recent.map(r=>`<tr><td>${r.date}</td><td>${r.branch}</td><td>${r.trx}</td><td>${rupiah(r.amount)}</td><td>${r.reason}</td><td><span class="badge ${r.status==="APPROVED"?"ok":r.status==="REJECTED"?"reject":"pending"}">${r.status}</span></td></tr>`).join("")}</tbody></table>`:'<div class="empty">Belum ada data void. Silakan input data pertama.</div>';
+}
+function renderDatabase(){
+ let q=($("search").value||"").toLowerCase(),fd=$("filterDate").value,fb=($("filterBranch").value||"").toLowerCase(),fr=$("filterReason").value;
+ let rows=data.filter(r=>(!fd||r.date===fd)&&(!fb||r.branch.toLowerCase().includes(fb))&&(!fr||r.reason===fr)&&(!q||r.trx.toLowerCase().includes(q)||r.inputer.toLowerCase().includes(q)));
+ $("dbBody").innerHTML=rows.length?rows.map(r=>`<tr><td>${r.date}</td><td>${r.branch}</td><td>${r.inputer}</td><td>${r.trx}</td><td>${rupiah(r.amount)}</td><td>${r.reason}</td><td><span class="badge ${r.status==="APPROVED"?"ok":r.status==="REJECTed"?"reject":"pending"}">${r.status}</span></td><td><button class="btn danger" style="padding:6px 9px;font-size:11px" onclick="del(${r.id})">Hapus</button></td></tr>`).join(""):'<tr><td colspan="8" class="empty">Data tidak ditemukan.</td></tr>';
+}
+function del(id){if(confirm("Hapus data void ini?")){data=data.filter(x=>x.id!==id);localStorage.setItem("voidTrackerData",JSON.stringify(data));renderDatabase();renderAll()}}
+init();
+</script>
+</body>
+</html>
